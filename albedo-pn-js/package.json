@@ -1,0 +1,18 @@
+{
+    "name": "albedo-pn-js",
+    "version": "1.0.0",
+    "description": "",
+    "type": "module",
+    "main": "index.js",
+    "scripts": {
+        "start": "node ."
+    },
+    "keywords": [],
+    "author": "",
+    "license": "Apache-2.0",
+    "packageManager": "pnpm@10.29.2",
+    "dependencies": {
+        "dotenv": "^17.3.1",
+        "matrix-js-sdk": "41.1.0-rc.0"
+    }
+}
