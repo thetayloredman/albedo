@@ -57,7 +57,9 @@ client.once(mx.ClientEvent.Sync, async (state) => {
             console.log(
                 `Not currently in room ${ROOM_ID}, attempting to join...`,
             );
-            joinRoom(ROOM_ID).then((ok) => { if (ok) publishRoster(); });
+            joinRoom(ROOM_ID).then((ok) => {
+                if (ok) publishRoster();
+            });
         }
     }
 });
@@ -67,7 +69,9 @@ client.on(mx.RoomEvent.MyMembership, (room, membership, prevMembership) => {
         room.getDMInviter() === ADMIN_MXID
     ) {
         console.log(`Invited to room ${room.roomId}, attempting to join...`);
-        joinRoom(room.roomId).then((ok) => { if (ok && room.roomId === ROOM_ID) publishRoster(); });
+        joinRoom(room.roomId).then((ok) => {
+            if (ok && room.roomId === ROOM_ID) publishRoster();
+        });
     }
 });
 
@@ -108,7 +112,8 @@ const isParticipant = (server) => roster.has(server);
 const eventSender = (event) => serverFromMxid(event.getSender());
 
 async function setUserPowerLevel(userMxid, level) {
-    const content = (await client.getStateEvent(ROOM_ID, "m.room.power_levels", "")) || {};
+    const content =
+        (await client.getStateEvent(ROOM_ID, "m.room.power_levels", "")) || {};
     if (!content.users) content.users = {};
     content.users[userMxid] = level;
     await client.sendStateEvent(ROOM_ID, "m.room.power_levels", content, "");
@@ -241,7 +246,7 @@ client.on(mx.RoomEvent.Timeline, async (event, room, toStartOfTimeline) => {
     }
 });
 
-client.on(mx.RoomEvent.Timeline, (event, room, toStartOfTimeline) => {
+client.on(mx.RoomEvent.Timeline, async (event, room, toStartOfTimeline) => {
     if (toStartOfTimeline) return;
     if (event.getAge() > 60000) return; // Ignore events older than 60 seconds because they may be stale.
     // We listen for admin commands in any room, as long as they are sent by the admin user.
@@ -291,6 +296,28 @@ client.on(mx.RoomEvent.Timeline, (event, room, toStartOfTimeline) => {
                     `Could not find MXID for server ${serverToKick}, cannot kick.`,
                 );
             }
+        } else if (body === "!acs reset") {
+            // Kick all participants and clear the roster.
+
+            Object.keys(serverInfo).forEach((mxid) => {
+                setUserPowerLevel(mxid, 10);
+            });
+            roster.clear();
+            serverInfo = {};
+            publishRoster();
+            client.sendNotice(
+                room.roomId,
+                `Reset roster and kicked all participants.`,
+            );
+            console.log(
+                `Reset roster and kicked all participants by admin command.`,
+            );
+        } else {
+            client.sendNotice(
+                room.roomId,
+                `Unknown command: ${body}
+Available commands: !acs roster, !acs kick <server>, !acs reset`,
+            );
         }
     }
 });
@@ -327,7 +354,8 @@ async function beginRound(server) {
                         );
 
                         // Increment the timeout count for this participant.
-                        gettingOnMyNerves[participant] = (gettingOnMyNerves[participant] || 0) + 1;
+                        gettingOnMyNerves[participant] =
+                            (gettingOnMyNerves[participant] || 0) + 1;
 
                         console.warn(
                             `Server ${participant} has now timed out for ${gettingOnMyNerves[participant]} consecutive rounds.`,
