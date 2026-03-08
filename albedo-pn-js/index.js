@@ -20,7 +20,9 @@ const HOMESERVER_URL = process.env.HOMESERVER_URL;
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
 const USER_ID = process.env.USER_ID;
 const ROOM_ID = process.env.ROOM_ID;
-const SERVER_NAME = USER_ID.split(":")[1];
+const CONTACT_MXID = process.env.CONTACT_MXID || null;
+const LOCATION = process.env.LOCATION || null;
+const SERVER_NAME = USER_ID.split(":").slice(1).join(":");
 
 if (!HOMESERVER_URL || !ACCESS_TOKEN || !USER_ID || !ROOM_ID) {
     console.error(
@@ -42,6 +44,22 @@ client.startClient();
 client.once(mx.ClientEvent.Sync, (state) => {
     if (state === "PREPARED") {
         console.log("Client synced and ready.");
+
+        if (!client.getRoom(ROOM_ID)) {
+            console.log(
+                `Not currently in room ${ROOM_ID}, attempting to join...`,
+            );
+            client
+                .joinRoom(ROOM_ID)
+                .then(() => {
+                    console.log(`Successfully joined room ${ROOM_ID}.`);
+                })
+                .catch((err) => {
+                    console.error(`Failed to join room ${ROOM_ID}:`, err);
+                });
+        }
+
+        register();
     }
 });
 client.on(mx.RoomEvent.MyMembership, (room, membership, prevMembership) => {
@@ -58,18 +76,6 @@ client.on(mx.RoomEvent.MyMembership, (room, membership, prevMembership) => {
             });
     }
 });
-if (!client.getRoom(ROOM_ID)) {
-    console.log(`Not currently in room ${ROOM_ID}, attempting to join...`);
-    client
-        .joinRoom(ROOM_ID)
-        .then(() => {
-            console.log(`Successfully joined room ${ROOM_ID}.`);
-            register();
-        })
-        .catch((err) => {
-            console.error(`Failed to join room ${ROOM_ID}:`, err);
-        });
-}
 
 // The most recent roster state event in the room.
 let roster = new Set();
@@ -81,10 +87,10 @@ async function updateRoster() {
         console.error(`Not in room ${ROOM_ID}, cannot update roster.`);
         return;
     }
-    const rosterEvent = room
-        .getLiveTimeline()
-        .getState(mx.EventTimeline.FORWARDS)
-        .getStateEvents("dev.zirco.albedo.roster", "")[0];
+    const rosterEvent = room.currentState.getStateEvents(
+        "dev.zirco.albedo.roster",
+        "",
+    );
     if (!rosterEvent) {
         console.warn("No roster event found in room, assuming empty roster.");
         roster = new Set();
@@ -104,6 +110,7 @@ async function updateRoster() {
 
 client.on(mx.RoomEvent.Timeline, (event, room, toStartOfTimeline) => {
     if (toStartOfTimeline) return; // Ignore old events when syncing.
+    if (event.getAge() > 60000) return; // Ignore events older than 60 seconds because they may be stale.
     if (room.roomId !== ROOM_ID) return; // Ignore events from other rooms.
     if (event.getType() === "dev.zirco.albedo.roster") {
         console.log("Roster state event updated, refreshing roster...");
@@ -121,14 +128,19 @@ client.on(mx.RoomEvent.Timeline, (event, room, toStartOfTimeline) => {
 });
 
 const isParticipant = (server) => roster.has(server);
-const eventSender = (event) => event.getSender().split(":")[1];
+const eventSender = (event) => event.getSender().split(":").slice(1).join(":");
 
 // Event senders
 async function register() {
     await client.sendEvent(
         ROOM_ID,
         "dev.zirco.albedo.register",
-        { capabilities: [], user_agent: "albedo-pn-js/1.0.0" },
+        {
+            capabilities: [],
+            user_agent: "albedo-pn-js/1.0.0",
+            contact_mxid: CONTACT_MXID,
+            location: LOCATION,
+        },
         "",
     );
     console.log("Attempted registration with CS.");
@@ -145,7 +157,7 @@ async function sendPong(id, pingServer, ms) {
     await client.sendEvent(
         ROOM_ID,
         "dev.zirco.albedo.pong",
-        { id, ping_server: pingServer, pong_server: SERVER_NAME, ms },
+        { id, ping_server: pingServer, ms },
         "",
     );
     console.log(`Sent pong event back to ${pingServer} with latency ${ms}ms.`);
@@ -167,11 +179,15 @@ process.on("SIGTERM", async () => {
 // EVENT HANDLERS
 client.on(mx.RoomEvent.Timeline, (event, room, toStartOfTimeline) => {
     if (toStartOfTimeline) return; // Ignore old events when syncing.
+    if (event.getAge() > 60000) return; // Ignore events older than 60 seconds because they may be stale.
     if (room.roomId !== ROOM_ID) return; // Ignore events from other rooms.
 
     const senderServer = eventSender(event);
 
-    if (event.getType() === "dev.zirco.albedo.register.reject") {
+    if (
+        event.getType() === "dev.zirco.albedo.register.reject" &&
+        event.getContent().user === USER_ID
+    ) {
         console.warn(
             `Registration rejected by CS: ${event.getContent().reason}, leaving room.`,
         );
@@ -205,5 +221,3 @@ client.on(mx.RoomEvent.Timeline, (event, room, toStartOfTimeline) => {
         sendPing(id);
     }
 });
-
-await register();

@@ -108,12 +108,22 @@ A rejection is indicated by the `dev.zirco.albedo.register.reject` event. It is 
 sending of an updated `dev.zirco.albedo.roster` event by the CS.
 
 The PN must provide a list of its additional protocol "capabilities," which will be used in
-future versions of the spec, alongside information on its PN implementation and version.
+future versions of the spec, alongside information on its PN implementation and version, separated by a slash.
+
+The PN must also include the type and version of the homeserver software, separated by a slash.
+
+The PN must also include the following fields:
+
+- `contact_mxid`: a Matrix ID that can be used by the CS operator to contact the PN operator in case of issues, or null.
+- `location`: an optional ISO3166-2 country code representing the physical location of the server, which may be used by the CS for statistical purposes, or null.
 
 ```json
 {
     "capabilities": [],
-    "user_agent": "albedo-pn-js/1.0.0"
+    "user_agent": "albedo-pn-js/1.0.0",
+    "homeserver": "synapse/1.88.0",
+    "contact_mxid": "@host:example.com",
+    "location": "US-CA"
 }
 ```
 
@@ -198,7 +208,6 @@ A PN should not respond to itself.
 ```json
 {
     "ping_server": "ping-server.com",
-    "pong_server": "pong-server.com",
     "ms": 400,
     "id": "<string>"
 }
