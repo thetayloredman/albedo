@@ -312,7 +312,7 @@ client.on(mx.RoomEvent.Timeline, async (event, room, toStartOfTimeline) => {
             console.log(
                 `Reset roster and kicked all participants by admin command.`,
             );
-        } else {
+        } else if (body.startsWith("!acs")) {
             client.sendNotice(
                 room.roomId,
                 `Unknown command: ${body}
