@@ -1,3 +1,5 @@
 node_modules
 /.direnv
 .env
+/albedo-pn-maubot/.venv
+/albedo-pn-maubot/dev.zirco.albedo-pn-*.mbp

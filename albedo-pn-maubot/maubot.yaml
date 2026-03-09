@@ -1,0 +1,10 @@
+maubot: 0.1.0
+id: dev.zirco.albedo-pn
+version: 1.0.0
+license: Apache-2.0
+modules:
+    - albedo_pn
+main_class: AlbedoPn
+config: true
+extra_files:
+    - base-config.yaml

@@ -23,6 +23,7 @@ const ROOM_ID = process.env.ROOM_ID;
 const CONTACT_MXID = process.env.CONTACT_MXID || null;
 const LOCATION = process.env.LOCATION || null;
 const SERVER_NAME = USER_ID.split(":").slice(1).join(":");
+const USER_AGENT = "albedo-pn-js/1.0.0";
 
 if (!HOMESERVER_URL || !ACCESS_TOKEN || !USER_ID || !ROOM_ID) {
     console.error(
@@ -59,7 +60,9 @@ client.once(mx.ClientEvent.Sync, (state) => {
                 });
         }
 
-        register();
+        if (client.getRoom(ROOM_ID)) {
+            register();
+        }
     }
 });
 client.on(mx.RoomEvent.MyMembership, (room, membership, prevMembership) => {
@@ -132,12 +135,18 @@ const eventSender = (event) => event.getSender().split(":").slice(1).join(":");
 
 // Event senders
 async function register() {
+    if (!client.getRoom(ROOM_ID)) {
+        console.error(
+            `Cannot register with CS because not currently in room ${ROOM_ID}.`,
+        );
+        return;
+    }
     await client.sendEvent(
         ROOM_ID,
         "dev.zirco.albedo.register",
         {
             capabilities: [],
-            user_agent: "albedo-pn-js/1.0.0",
+            user_agent: USER_AGENT,
             contact_mxid: CONTACT_MXID,
             location: LOCATION,
         },

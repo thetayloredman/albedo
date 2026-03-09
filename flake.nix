@@ -23,6 +23,7 @@
             nixfmt
             nodejs
             pnpm
+            python3
           ];
 
         };

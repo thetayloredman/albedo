@@ -181,7 +181,10 @@ client.on(mx.RoomEvent.Timeline, async (event, room, toStartOfTimeline) => {
             await setUserPowerLevel(event.getSender(), 20);
 
             roster.add(senderServer);
-            serverInfo[senderServer] = event.getContent();
+            serverInfo[senderServer] = {
+                ...event.getContent(),
+                mxid: event.getSender(),
+            };
             await publishRoster();
             console.log(`Registered server ${senderServer}.`);
         }
@@ -272,9 +275,7 @@ client.on(mx.RoomEvent.Timeline, async (event, room, toStartOfTimeline) => {
             }
 
             // Set the kicked participant's PL to 10 to revoke their permissions.
-            const participantMxid = Object.keys(serverInfo).find(
-                (mxid) => serverInfo[mxid].server === serverToKick,
-            );
+            const participantMxid = serverInfo[serverToKick]?.mxid;
             if (participantMxid) {
                 setUserPowerLevel(participantMxid, 10);
                 roster.delete(serverToKick);
@@ -299,9 +300,16 @@ client.on(mx.RoomEvent.Timeline, async (event, room, toStartOfTimeline) => {
         } else if (body === "!acs reset") {
             // Kick all participants and clear the roster.
 
-            Object.keys(serverInfo).forEach((mxid) => {
-                setUserPowerLevel(mxid, 10);
-            });
+            for (const participant of roster) {
+                const participantMxid = serverInfo[participant]?.mxid;
+                if (participantMxid) {
+                    await setUserPowerLevel(participantMxid, 10);
+                } else {
+                    console.warn(
+                        `Could not find MXID for server ${participant} while resetting roster, cannot revoke permissions.`,
+                    );
+                }
+            }
             roster.clear();
             serverInfo = {};
             publishRoster();

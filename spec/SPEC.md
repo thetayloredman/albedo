@@ -121,7 +121,6 @@ The PN must also include the following fields:
 {
     "capabilities": [],
     "user_agent": "albedo-pn-js/1.0.0",
-    "homeserver": "synapse/1.88.0",
     "contact_mxid": "@host:example.com",
     "location": "US-CA"
 }

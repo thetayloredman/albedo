@@ -1,0 +1,8 @@
+# the Albedo room to listen for CS commands in
+room_id: "!qiDIUJFdBvqWDlvxLL:zirco.dev"
+
+# the person CS admins can contact in the case of any issues (publicly visible), or null
+contact_mxid: null
+
+# the ISO3166-2 location of the server (publicly visible), or null
+location: "US-KY"
