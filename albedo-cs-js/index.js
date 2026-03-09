@@ -312,11 +312,29 @@ client.on(mx.RoomEvent.Timeline, async (event, room, toStartOfTimeline) => {
             console.log(
                 `Reset roster and kicked all participants by admin command.`,
             );
+        } else if (body.startsWith("!acs start")) {
+            const serverToStart = body.slice("!acs start".length).trim();
+            if (!isParticipant(serverToStart)) {
+                client.sendNotice(
+                    room.roomId,
+                    `Server ${serverToStart} is not in the roster.`,
+                );
+                return;
+            }
+
+            beginRound(serverToStart);
+            client.sendNotice(
+                room.roomId,
+                `Manually started round for server ${serverToStart}.`,
+            );
+            console.log(
+                `Manually started round for server ${serverToStart} by admin command.`,
+            );
         } else if (body.startsWith("!acs")) {
             client.sendNotice(
                 room.roomId,
                 `Unknown command: ${body}
-Available commands: !acs roster, !acs kick <server>, !acs reset`,
+Available commands: !acs roster, !acs kick <server>, !acs start <server>, !acs reset`,
             );
         }
     }
